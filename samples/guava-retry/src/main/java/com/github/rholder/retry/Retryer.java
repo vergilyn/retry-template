@@ -154,27 +154,42 @@ public final class Retryer<V> {
      */
     public V call(Callable<V> callable) throws ExecutionException, RetryException {
         long startTime = System.nanoTime();
+
+        // 执行尝试次数从`1`开始。
+        // 第1次并不是重试，而是正常执行。
         for (int attemptNumber = 1; ; attemptNumber++) {
             Attempt<V> attempt;
             try {
+                // 1. 执行实际方法。
                 V result = attemptTimeLimiter.call(callable);
+
+                // 2. 封装执行结果
                 attempt = new ResultAttempt<V>(result, attemptNumber, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
             } catch (Throwable t) {
                 attempt = new ExceptionAttempt<V>(t, attemptNumber, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
             }
 
+            // 3. 将执行结果传给`RetryListener`做一些额外的事情。
+            // 例如：保存每次执行的执行结果，`Map<attemptNumber, Attempt>`
             for (RetryListener listener : listeners) {
                 listener.onRetry(attempt);
             }
 
+            // 4. 决定是否要进行重试。
+            // 如果不进行重试，直接返回结果（执行成功结果，或者 异常）。
             if (!rejectionPredicate.apply(attempt)) {
                 return attempt.get();
             }
+
+            // 需要进行重试
+            // 5. 先判断是否满足停止重试
             if (stopStrategy.shouldStop(attempt)) {
                 throw new RetryException(attemptNumber, attempt);
             } else {
+                // 6.1 确定重试时间间隔
                 long sleepTime = waitStrategy.computeSleepTime(attempt);
                 try {
+                    // 6.2 根据阻塞策略进行等待
                     blockStrategy.block(sleepTime);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

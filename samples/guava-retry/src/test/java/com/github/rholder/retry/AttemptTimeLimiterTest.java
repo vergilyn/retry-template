@@ -16,7 +16,6 @@
 
 package com.github.rholder.retry;
 
-import com.google.common.util.concurrent.UncheckedTimeoutException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -50,6 +49,8 @@ public class AttemptTimeLimiterTest {
             // Assertions.assertEquals(UncheckedTimeoutException.class, e.getCause().getClass());
             // guava 高版本(例如`31.1-jre`)貌似抛出的是 `java.util.concurrent.TimeoutException`
             Assertions.assertEquals(TimeoutException.class, e.getCause().getClass());
+
+            // e.printStackTrace();
         }
     }
 
