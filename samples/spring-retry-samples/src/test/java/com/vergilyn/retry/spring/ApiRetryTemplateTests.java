@@ -9,6 +9,7 @@ import com.vergilyn.retry.spring.extension.ApiRetryContext;
 import com.vergilyn.retry.spring.extension.RateLimit;
 import com.vergilyn.retry.spring.extension.RateLimitRetryListener;
 import com.vergilyn.retry.spring.extension.exception.ResultRetryException;
+import com.vergilyn.retry.spring.extension.listener.LastResultRetryListener;
 import com.vergilyn.retry.spring.extension.support.AbstractRateLimit;
 import com.vergilyn.retry.spring.extension.support.QpsRateLimit;
 import lombok.extern.slf4j.Slf4j;
@@ -102,6 +103,7 @@ public class ApiRetryTemplateTests {
 	@ParameterizedTest
 	@ValueSource(ints = {3, 5})
 	public void douyin(Integer maxAttempts){
+		LastResultRetryListener lastResultRetryListener = new LastResultRetryListener();
 
 		RetryTemplate template = RetryTemplate.builder()
 				// callback 的重试次数
@@ -109,12 +111,15 @@ public class ApiRetryTemplateTests {
 				// callback 的重试间隔
 				.fixedBackoff(1000)
 				.retryOn(ResultRetryException.class)
-				// 实现 流控规则
-				.withListener(_rateLimitRetryListener)
+				// `Listener`是倒序执行
 				.withListener(buildRetryByResult(apiResponse -> {
 					String[] retryCodes = { DOUYIN_CODE_FAILURE };
 					return ArrayUtils.contains(retryCodes, apiResponse.getErrorCode());
 				}))
+				// 实现 流控规则
+				.withListener(_rateLimitRetryListener)
+				// （暂时2023-02-10推荐方式）用于获取根据执行结果重试时，最后1次的执行结果。线程不安全，需要最先执行此 RetryListener！
+				.withListener(lastResultRetryListener)
 				.build();
 
 		// `RetryTemplate#execute(...)` 前初始化自定义的 RetryContext
@@ -139,11 +144,19 @@ public class ApiRetryTemplateTests {
 			ApiResponse resp = template.execute(_douyin);
 			log.warn("[vergilyn] SUCCESS last-result: {}", JSON.toJSONString(resp, true));
 
-		} catch (ResultRetryException e) {
-
-			log.warn("[vergilyn] FAILURE last-result: {}", JSON.toJSONString(e.getResult(), true));
-
 		} catch (Exception e) {
+			if (e instanceof ResultRetryException){
+				ResultRetryException re = (ResultRetryException) e;
+				// 这种方式 并不推荐，原因：
+				//   当存在多个 RetryListener's 时，需要执行到相应的 XxRetryListener 才会抛出此异常。
+				//   此时需要严格 RetryListener's 的执行顺序。
+				// 所以，更推荐用 LastResultRetryListener 来达到此目的
+
+				log.warn("[vergilyn] FAILURE last-result-by-ResultRetryException: {}", JSON.toJSONString(re.getResult(), true));
+			}
+
+			// 推荐方式：
+			log.warn("[vergilyn] FAILURE last-result-by-LastResultRetryListener: {}", JSON.toJSONString(lastResultRetryListener.getLastResult(), true));
 
 			e.printStackTrace();
 		}

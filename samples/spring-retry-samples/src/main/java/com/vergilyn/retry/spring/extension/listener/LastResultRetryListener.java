@@ -14,4 +14,8 @@ public class LastResultRetryListener extends RetryListenerSupport {
 	public <T, E extends Throwable> void onSuccess(RetryContext context, RetryCallback<T, E> callback, T result) {
 		this.lastResult = result;
 	}
+
+	public Object getLastResult() {
+		return lastResult;
+	}
 }
