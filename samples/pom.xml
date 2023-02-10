@@ -15,6 +15,15 @@
     <packaging>pom</packaging>
     <modules>
         <module>guava-retry</module>
+        <module>spring-retry-samples</module>
+        <module>extra-api-common</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>com.vergilyn.retry</groupId>
+            <artifactId>extra-api-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 </project>
