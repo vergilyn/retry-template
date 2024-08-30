@@ -17,6 +17,7 @@
         <module>guava-retry</module>
         <module>spring-retry-samples</module>
         <module>extra-api-common</module>
+        <module>resilience4j-samples</module>
     </modules>
 
     <dependencies>

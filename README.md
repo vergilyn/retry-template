@@ -17,3 +17,4 @@ Q1. 流控和重试都会触发等待，区分 rate-times 和 retry-times？
 ## See Also
 - spring-retry: <https://github.com/spring-projects/spring-retry>
 - guava-retrying（不再维护）: <https://github.com/rholder/guava-retrying>
+- resilience4j: <https://github.com/resilience4j/resilience4j>

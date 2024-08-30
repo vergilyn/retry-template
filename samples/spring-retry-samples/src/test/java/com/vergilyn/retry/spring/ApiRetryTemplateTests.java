@@ -111,7 +111,7 @@ public class ApiRetryTemplateTests {
 				// callback 的重试间隔
 				.fixedBackoff(1000)
 				.retryOn(ResultRetryException.class)
-				// `Listener`是倒序执行
+				// `Listener`是倒序执行！！！
 				.withListener(buildRetryByResult(apiResponse -> {
 					String[] retryCodes = { DOUYIN_CODE_FAILURE };
 					return ArrayUtils.contains(retryCodes, apiResponse.getErrorCode());
@@ -136,7 +136,10 @@ public class ApiRetryTemplateTests {
 					}
 				}
 		));
-		// 通过 RetrySynchronizationManager#register 提前注册自定义的 RetryContext
+		// （根据javadoc描述，不推荐这么调用`register`方法。
+		//      并且其目的只是注册 RateLimit's，完全可以直接通过`RateLimitRetryListener#open()`实现，
+		//      不需要将 RateLimit's 提前注册到 RetryContext 中）
+		// 通过 RetrySynchronizationManager#register 提前注册自定义的 RetryContext。
 		//  1) 添加 RateLimitListener
 		RetrySynchronizationManager.register(apiRetryContext);
 
